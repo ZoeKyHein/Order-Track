@@ -9,7 +9,8 @@ func SetupRouter() *gin.Engine {
 	router := gin.Default()
 	customer := router.Group("/customer")
 	{
-		customer.POST("", controllers.AddCustomer) // 新增用户
+		customer.POST("", controllers.AddCustomer)      // 新增用户
+		customer.GET("", controllers.FetchAllCustomers) // 获取用户
 	}
 
 	return router

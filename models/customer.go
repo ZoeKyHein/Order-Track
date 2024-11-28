@@ -38,3 +38,56 @@ func (c *Customer) TransferToDTO() dto.CustomerDTO {
 		UpdatedAt: c.UpdatedAt.Format(utils.TimeFormat),
 	}
 }
+
+// CustomerWithStats 客户及统计信息模型
+type CustomerWithStats struct {
+	Customer
+	OrderCount int     `gorm:"order_count"` // 客户订单数
+	TotalSales float64 `gorm:"total_sales"` // 客户累计销售额
+}
+
+func (cws *CustomerWithStats) TransferToDTO() dto.CustomerDTOWithStats {
+	return dto.CustomerDTOWithStats{
+		CustomerDTO: dto.CustomerDTO{
+			ID:        cws.ID,
+			Name:      cws.Name,
+			Phone:     cws.Phone,
+			Email:     cws.Email,
+			Address:   cws.Address,
+			Remark:    cws.Remark,
+			CreatedAt: cws.CreatedAt.Format(utils.TimeFormat),
+			UpdatedAt: cws.UpdatedAt.Format(utils.TimeFormat),
+		},
+		OrderCount:  cws.OrderCount,
+		AmountCount: cws.TotalSales,
+	}
+}
+
+// FetchAllCustomers 获取客户列表
+func FetchAllCustomers(req dto.FetchCustomerRequest) ([]CustomerWithStats, int64, error) {
+	var customers []CustomerWithStats
+	var total int64
+
+	db := config.DB.Model(&Customer{}).Select(`customers.*,
+        COUNT(orders.id) AS order_count,
+        IFNULL(SUM(orders.amount), 0) AS total_sales`).
+		Joins("LEFT JOIN orders ON customers.id = orders.customer_id").
+		Group("customers.id")
+
+	if req.KeyWords != "" {
+		db = db.Where(`customers.name LIKE ?`, "%"+req.KeyWords+"%")
+	}
+
+	if req.Phone != "" {
+		db = db.Where(`customers.phone = ?`, req.Phone)
+	}
+
+	limit := req.PageSize
+	offset := (req.Page - 1) * req.PageSize
+
+	err := db.Count(&total).Limit(limit).Offset(offset).Find(&customers).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	return customers, total, nil
+}
