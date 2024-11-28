@@ -13,14 +13,15 @@ func AddCustomer(c *gin.Context) {
 
 	// 绑定参数
 	if err := c.ShouldBind(&req); err != nil {
-		utils.Fail(c, nil, 1001, err.Error())
+		utils.Fail(c, nil, utils.ErrCodeBindError, err.Error())
 		return
 	}
 
 	// 调用服务
 	customer, err := services.AddCustomer(req)
 	if err != nil {
-		utils.Fail(c, nil, 1002, err.Error())
+		utils.Fail(c, nil, utils.ErrCodeServiceError, err.Error())
+		return
 	}
 
 	// 返回数据
